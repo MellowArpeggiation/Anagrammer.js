@@ -19,7 +19,7 @@ var fileFormat = ".svg";
 
 // Location where the images are stored, letters must be in the format "a.svg" and within the first level
 // Don't forget trailing slash!
-var imageLocation = "http://mellowarpeggiation.github.io/Anagrammer.js/letters/";
+var imageLocation = "//mellowarpeggiation.github.io/Anagrammer.js/letters/";
 
 // --------------------------------------
 
