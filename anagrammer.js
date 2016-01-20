@@ -19,7 +19,7 @@ var fileFormat = ".svg";
 
 // Location where the images are stored, letters must be in the format "a.svg" and within the first level
 // Don't forget trailing slash!
-var imageLocation = "https://raw.githubusercontent.com/MellowArpeggiation/Anagrammer.js/master/letters/";
+var imageLocation = "http://git.arpeggi.at/Anagrammer.js/letters/";
 
 // --------------------------------------
 
