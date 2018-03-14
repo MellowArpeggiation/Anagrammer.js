@@ -98,7 +98,7 @@
                 } else {
                     var characterImage = self.opts.imageLocation + character + self.opts.fileFormat;
                     var $character = $('<img src="' + characterImage + '" class="anagram-character ' + character + '">');
-                    $character.data('index', i - spaces).appendTo(self.$anagramWord);
+                    $character.attr('data-index', i - spaces).appendTo(self.$anagramWord);
                 }
             }
         },
@@ -145,7 +145,7 @@
             });
 
             $letters.each(function (index) {
-                $(this).data('index', index);
+                $(this).attr('data-index', index);
             });
 
             var $lettersRemaining = self.$anagramWord.find('img');
@@ -182,8 +182,8 @@
             $dummyLetters.each(function () {
                 var $letter = $(this);
                 $letter.animate({
-                    left: newOffsets[$letter.data('index')].left,
-                    top: newOffsets[$letter.data('index')].top,
+                    left: newOffsets[$letter.attr('data-index')].left,
+                    top: newOffsets[$letter.attr('data-index')].top,
                 }, {
                     duration: self.opts.animationDuration,
                     complete: function () {
