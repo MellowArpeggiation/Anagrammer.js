@@ -1,175 +1,184 @@
-// --------------------------------------
-//   Copyright 2012-2016 George Paton
-//   Anagrammer.js, requires jQuery 1.11+
-// --------------------------------------
+/** --------------------------------------
+ *   Copyright 2012-2017 George Paton
+ *   Anagrammer.js, requires jQuery 1.11+
+ *  --------------------------------------
+ */
 
-// * User variables * Override before calling anagrammer()
+(function () {
 
-// How many seconds between rearranges
-var arrangeRate = 8000;
-// How long the animation lasts
-var animationDuration = 3000;
-var animationSegmentDuration = 100;
+    // Default values
+    var defaults = {
+        // How many seconds between rearranges
+        arrangeRate: 8000,
 
-// Ensure that the words are true anagrams
-// Also ensure that all the letters have images associated
-var words = ["manage the ram", "anagram theme"];
+        // How long the animation lasts
+        animationDuration: 3000,
 
-var fileFormat = ".svg";
+        // Ensure that the words are true anagrams
+        // Also ensure that all the letters have images associated
+        words: [],
+        fileFormat: '.svg',
 
-// Location where the images are stored, letters must be in the format "a.svg" and within the first level
-// Don't forget trailing slash!
-var imageLocation = "//mellowarpeggiation.github.io/Anagrammer.js/letters/";
+        // Location where the images are stored, letters must be in the format 'a.svg' and within the first level
+        // Don't forget trailing slash!
+        imageLocation: '//mellowarpeggiation.github.io/Anagrammer.js/letters/',
 
-// --------------------------------------
+        onStart: $.noop,
+    };
 
-function arrangeAsString(nameString, animDuration) {
-	if ($("#anword").length == 0) {
-		anword = document.createElement("div");
-		anword.id = "anword";
+    // --------------------------------------
 
-		dummy = document.createElement("div");
-		dummy.id = "dummy";
+    var $body = $('body');
 
-		$("#anagram").append(anword);
-		$("#anagram").append(dummy);
+    var Anagrammer = function ($container, options) {
+        var self = this;
 
-		var spaces = 0;
-		for (var i = 0; i < nameString.length; i++) {
-			if (nameString[i] == ' ') {
-				lBreak = document.createElement("br");
-				$("#anword").append(lBreak);
-				spaces++
-			} else {
-				character = document.createElement("img");
-				character.src = imageLocation + nameString[i] + fileFormat;
-				$(character).addClass(nameString[i]);
-				$(character).addClass("anchar");
-				$(character).attr("index", i-spaces);
-				$("#anword").append(character);
-			}
-		}
-	} else {
-		console.log("Rearranging as " + nameString + "...");
+        if (!(self instanceof Anagrammer)) {
+            return new Anagrammer();
+        }
 
-		$("#dummy").empty();
+        self.opts = $.extend({}, defaults, options);
+        self.$container = $container;
 
-		$("#anword *").clone().appendTo($("#dummy"));
-		var offset = ($("#anword").offset());
-		$("#dummy").css("position", "absolute")
-			.css("left", 0)
-			.css("top", 0);
+        self.init();
+    };
 
-		var oldOffsets = new Array();
-		$("#dummy img").each(function(i) {
-			oldOffsets[i] = $($("#anword img")[i]).offset();
-			$(this).css("position", "absolute")
-				.css("left", oldOffsets[i].left)
-				.css("top", oldOffsets[i].top);
-		})
+    Anagrammer.prototype = {
+        init: function () {
+            var self = this;
 
-		$("#anword img").each(function(i) {
-			$(this).attr("index", i);
-		})
+            self.currentWord = self.opts.words[0];
+            self.$anagramWord = $('<div class="anagram-word"></div>').appendTo(self.$container);
+            self.$dummyWord = $('<div class="dummy-word"></div>').appendTo(self.$container);
 
-		var letters = $("#anword img").detach();
-		$("#anword").empty();
+            var spaces = 0;
+            for (var i = 0; i < self.currentWord.length; i++) {
+                var character = self.currentWord[i];
+                if (character === ' ') {
+                    $('<br>').appendTo(self.$anagramWord);
+                    spaces++;
+                } else {
+                    var characterImage = self.opts.imageLocation + character + self.opts.fileFormat;
+                    var $character = $('<img src="' + characterImage + '" class="anagram-character ' + character + '">');
+                    $character.data('index', i - spaces).appendTo(self.$anagramWord);
+                }
+            }
 
-		var newOffsets = new Array();
+            // // Pre arrange to prevent weird pop in
+            // self.arrange(self.opts.words[1], true);
+            // self.arrange(self.opts.words[0], true);
+        },
+        preload: function () {
+            var numCharacters = 0;
+            var charactersLoaded = 0;
+            var $preload = $('<div></div>').hide().appendTo($body);
+        
+            for (var i = 0; i < self.opts.words[0].length; i++) {
+                if ((self.opts.words[0])[i] === ' ') {
+                    continue;
+                } else {
+                    numCharacters++;
 
-		var spaces = 0;
+                    var imageLocation = self.opts.imageLocation + (self.opts.words[0])[i] + self.opts.fileFormat;
+                    var $character = $('<img src="' + imageLocation + '">').appendTo($preload);
 
-		for (var i = 0; i < nameString.length; i++) {
-			if (nameString[i] == ' ') {
-				lBreak = document.createElement("br");
-				$("#anword").append(lBreak);
-				spaces++
-			} else {
-				for (var j = 0; j < letters.length; j++) {
-					if ($(letters[j]).hasClass(nameString[i])) {
-						$("#anword").append(letters[j]);
-						letters.splice(j, 1);
-						break;
-					}
-				}
-			}
-		}
+                    $character.on('load', function () {
+                        charactersLoaded++;
+                        // console.log('loaded image');
+                        if (charactersLoaded >= numCharacters) {
+                            // console.log('all images loaded');
+                            self.start();
+                        }
+                    });
+                }
+            }
+        },
+        start: function () {
+            var self = this;
 
-		$("#anword img").each(function(i) {
-			newOffsets[i] = $(this).offset();
-		})
+            self.opts.onStart();
 
-		$("#anword").hide();
-		$("#dummy").show();
+            setTimeout(self.arrange, self.opts.arrangeRate);
+        },
+        arrange: function (toWord) {
+            var i, j;
+            
+            // console.log('Rearranging as ' + toWord + '...');
 
-		// Animate here
-		var temps = new Array();
-		for (var i = 0; i < $("#dummy img").length; i++) {
-			var currentImage = $("#dummy img")[i];
-			$(currentImage).animate({
-				left: newOffsets[$(currentImage).attr("index")].left,
-				top: newOffsets[$(currentImage).attr("index")].top
-			}, {duration: animDuration, complete: finishAnimating} );
-		}
-	}
-}
+            // Clone the contents of anagramWord into the dummy
+            self.$dummyWord.html(self.$anagramWord.html());
 
-function finishAnimating() {
-	$("#anword").show();
-	$("#dummy").hide();
-}
+            // var offset = (self.$anagramWord.offset());
+            self.$dummyWord.css({
+                position: 'absolute',
+                left: 0,
+                top: 0,
+            });
 
-function rearrangeLoop() {
-	// Keep track of changes for timekeeping
-	var animateCounter = 0;
+            var $letters = self.$anagramWord.find('img');
+            var $dummyLetters = self.$dummyWord.find('img');
 
-	arrangeAsString(words[1], animationDuration);
-	animateCounter++;
+            var oldOffsets = [];
+            $dummyLetters.each(function (i) {
+                oldOffsets[i] = $($letters[i]).offset();
+                $(this).css({
+                    position: 'absolute',
+                    left: oldOffsets[i].left,
+                    top: oldOffsets[i].top,
+                });
+            });
 
-	setTimeout(function() {arrangeAsString(words[0], animationDuration)}, arrangeRate * animateCounter);
-	animateCounter++;
+            $letters.each(function (i) {
+                $(this).data('index', i);
+            });
 
-	setTimeout(rearrangeLoop, arrangeRate * animateCounter);
-}
+            $letters.detach();
+            self.$anagramWord.empty();
 
+            var newOffsets = [];
 
-function anagrammer() {
-	var numCharacters = 0,
-		charactersLoaded = 0;
-	var preload = document.createElement("div");
-	$(preload).hide();
-	for (var i = 0; i < words[0].length; i++) {
-		if ((words[0])[i] == ' ') {
-			continue;
-		} else {
-			numCharacters++;
+            // var spaces = 0;
+            for (i = 0; i < toWord.length; i++) {
+                if (toWord[i] === ' ') {
+                    $('<br>').appendTo(self.$anagramWord);
+                    // spaces++;
+                } else {
+                    for (j = 0; j < $letters.length; j++) {
+                        if ($($letters[j]).hasClass(toWord[i])) {
+                            self.$anagramWord.append($letters[j]);
+                            $letters.splice(j, 1);
+                            break;
+                        }
+                    }
+                }
+            }
 
-			character = document.createElement("img");
-			character.src = imageLocation + (words[0])[i] + fileFormat;
-			$(preload).append(character);
+            $letters.each(function (i) {
+                newOffsets[i] = $(this).offset();
+            });
 
-			$(character).on("load", function () {
-				charactersLoaded++;
-				console.log("loaded image");
-				if (charactersLoaded >= numCharacters) {
-					console.log("all images loaded");
-					beginAnagrammer();
-				}
-			});
-		}
-	}
+            self.$anagramWord.hide();
+            self.$dummyWord.show();
 
-	$(preload).ready(function () {
-		// Pre arrange to prevent weird pop in
-		arrangeAsString(words[1], 1);
-		arrangeAsString(words[0], 1);
-	})
-}
+            // Animate here
+            $dummyLetters.each(function () {
+                var $letter = $(this);
+                $letter.animate({
+                    left: newOffsets[$letter.data('index')].left,
+                    top: newOffsets[$letter.data('index')].top,
+                }, {
+                    duration: self.opts.animationDuration,
+                    complete: function () {
+                        self.$anagramWord.show();
+                        self.$dummyWord.hide();
+                    },
+                });
+            });
 
-function beginAnagrammer() {
-	setTimeout(rearrangeLoop, arrangeRate - animationDuration);
+            setTimeout(self.arrange, self.opts.arrangeRate);
+        },
 
-	if (typeof anagramLoaded == "function") {
-		anagramLoaded();
-	}
-}
+    };
+
+    window.Anagrammer = Anagrammer;
+})();
