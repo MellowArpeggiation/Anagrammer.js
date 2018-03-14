@@ -21,7 +21,7 @@
 
         // Location where the images are stored, letters must be in the format 'a.svg' and within the first level
         // Don't forget trailing slash!
-        imageLocation: '//mellowarpeggiation.github.io/Anagrammer.js/letters/',
+        imageLocation: 'http://mellowarpeggiation.github.io/Anagrammer.js/letters/',
 
         onStart: $.noop,
     };
@@ -51,24 +51,16 @@
             self.$anagramWord = $('<div class="anagram-word"></div>').appendTo(self.$container);
             self.$dummyWord = $('<div class="dummy-word"></div>').appendTo(self.$container);
 
-            var spaces = 0;
-            for (var i = 0; i < self.currentWord.length; i++) {
-                var character = self.currentWord[i];
-                if (character === ' ') {
-                    $('<br>').appendTo(self.$anagramWord);
-                    spaces++;
-                } else {
-                    var characterImage = self.opts.imageLocation + character + self.opts.fileFormat;
-                    var $character = $('<img src="' + characterImage + '" class="anagram-character ' + character + '">');
-                    $character.data('index', i - spaces).appendTo(self.$anagramWord);
-                }
-            }
+            // Begin preloading assets
+            self.preload();
 
             // // Pre arrange to prevent weird pop in
             // self.arrange(self.opts.words[1], true);
             // self.arrange(self.opts.words[0], true);
         },
         preload: function () {
+            var self = this;
+
             var numCharacters = 0;
             var charactersLoaded = 0;
             var $preload = $('<div></div>').hide().appendTo($body);
@@ -87,21 +79,45 @@
                         // console.log('loaded image');
                         if (charactersLoaded >= numCharacters) {
                             // console.log('all images loaded');
+                            // Once all the assets have successfully loaded, start the anagrammer
                             self.start();
                         }
                     });
                 }
             }
         },
+        build: function () {
+            var self = this;
+
+            var spaces = 0;
+            for (var i = 0; i < self.currentWord.length; i++) {
+                var character = self.currentWord[i];
+                if (character === ' ') {
+                    $('<br>').appendTo(self.$anagramWord);
+                    spaces++;
+                } else {
+                    var characterImage = self.opts.imageLocation + character + self.opts.fileFormat;
+                    var $character = $('<img src="' + characterImage + '" class="anagram-character ' + character + '">');
+                    $character.data('index', i - spaces).appendTo(self.$anagramWord);
+                }
+            }
+        },
         start: function () {
             var self = this;
 
+            // Build the anagram objects
+            self.build();
+
+            // Run the onStart callback, which can include removing loading spinners and the like
             self.opts.onStart();
 
-            setTimeout(self.arrange, self.opts.arrangeRate);
+            // Start rearranging
+            setTimeout(function () {
+                self.arrange(self.opts.words[0]);
+            }, self.opts.arrangeRate);
         },
         arrange: function (toWord) {
-            var i, j;
+            var self = this;
             
             // console.log('Rearranging as ' + toWord + '...');
 
@@ -119,18 +135,20 @@
             var $dummyLetters = self.$dummyWord.find('img');
 
             var oldOffsets = [];
-            $dummyLetters.each(function (i) {
-                oldOffsets[i] = $($letters[i]).offset();
+            $dummyLetters.each(function (index) {
+                oldOffsets[index] = $($letters[index]).offset();
                 $(this).css({
                     position: 'absolute',
-                    left: oldOffsets[i].left,
-                    top: oldOffsets[i].top,
+                    left: oldOffsets[index].left,
+                    top: oldOffsets[index].top,
                 });
             });
 
-            $letters.each(function (i) {
-                $(this).data('index', i);
+            $letters.each(function (index) {
+                $(this).data('index', index);
             });
+
+            var $lettersRemaining = self.$anagramWord.find('img');
 
             $letters.detach();
             self.$anagramWord.empty();
@@ -138,23 +156,23 @@
             var newOffsets = [];
 
             // var spaces = 0;
-            for (i = 0; i < toWord.length; i++) {
+            for (var i = 0; i < toWord.length; i++) {
                 if (toWord[i] === ' ') {
                     $('<br>').appendTo(self.$anagramWord);
                     // spaces++;
                 } else {
-                    for (j = 0; j < $letters.length; j++) {
-                        if ($($letters[j]).hasClass(toWord[i])) {
-                            self.$anagramWord.append($letters[j]);
-                            $letters.splice(j, 1);
+                    for (var j = 0; j < $lettersRemaining.length; j++) {
+                        if ($($lettersRemaining[j]).hasClass(toWord[i])) {
+                            self.$anagramWord.append($lettersRemaining[j]);
+                            $lettersRemaining.splice(j, 1);
                             break;
                         }
                     }
                 }
             }
 
-            $letters.each(function (i) {
-                newOffsets[i] = $(this).offset();
+            $letters.each(function (index) {
+                newOffsets[index] = $(this).offset();
             });
 
             self.$anagramWord.hide();
@@ -175,10 +193,19 @@
                 });
             });
 
-            setTimeout(self.arrange, self.opts.arrangeRate);
+            setTimeout(function () {
+                self.arrange(self.opts.words[1]);
+            }, self.opts.arrangeRate);
         },
 
     };
 
     window.Anagrammer = Anagrammer;
+    
+    $.fn.anagrammer = function (options) {
+        var $element = this;
+
+        var anagrammer = new Anagrammer($element, options);
+        $element.data('anagrammer', anagrammer);      
+    };
 })();

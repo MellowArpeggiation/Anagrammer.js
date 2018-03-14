@@ -14,7 +14,14 @@
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <script src="anagrammer.js"></script>
     <script>
-        
+        $('.anagram-container').anagrammer({
+            words: ['mellow arpeggiation', 'george william paton'],
+            arrangeRate: 2000,
+            animationDuration: 1000,
+            onStart: function () {
+                console.info('anagram sorting started');
+            },
+        });
     </script>
 </body>
 </html>
