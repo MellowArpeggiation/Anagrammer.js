@@ -47,16 +47,12 @@
         init: function () {
             var self = this;
 
-            self.currentWord = self.opts.words[0];
+            self.remainingWords = self.opts.words.slice(0);
             self.$anagramWord = $('<div class="anagram-word"></div>').appendTo(self.$container);
             self.$dummyWord = $('<div class="dummy-word"></div>').appendTo(self.$container);
 
             // Begin preloading assets
             self.preload();
-
-            // // Pre arrange to prevent weird pop in
-            // self.arrange(self.opts.words[1], true);
-            // self.arrange(self.opts.words[0], true);
         },
         preload: function () {
             var self = this;
@@ -76,22 +72,21 @@
 
                     $character.on('load', function () {
                         charactersLoaded++;
-                        // console.log('loaded image');
                         if (charactersLoaded >= numCharacters) {
-                            // console.log('all images loaded');
                             // Once all the assets have successfully loaded, start the anagrammer
                             self.start();
+                            $preload.remove();
                         }
                     });
                 }
             }
         },
-        build: function () {
+        build: function (firstWord) {
             var self = this;
 
             var spaces = 0;
-            for (var i = 0; i < self.currentWord.length; i++) {
-                var character = self.currentWord[i];
+            for (var i = 0; i < firstWord.length; i++) {
+                var character = firstWord[i];
                 if (character === ' ') {
                     $('<br>').appendTo(self.$anagramWord);
                     spaces++;
@@ -106,25 +101,41 @@
             var self = this;
 
             // Build the anagram objects
-            self.build();
+            self.build(self.opts.words[0]);
 
             // Run the onStart callback, which can include removing loading spinners and the like
             self.opts.onStart();
 
             // Start rearranging
             setTimeout(function () {
-                self.arrange(self.opts.words[0]);
+                self.arrange(0);
             }, self.opts.arrangeRate);
         },
-        arrange: function (toWord) {
+        getWord: function (index) {
             var self = this;
-            
-            // console.log('Rearranging as ' + toWord + '...');
+
+            // Once we are out of words, refresh the array
+            self.remainingWords = self.remainingWords.length
+                ? self.remainingWords
+                : self.opts.words.slice(0);
+
+            if (index == null) {
+                index = Math.floor(Math.random() * self.remainingWords.length);
+            }
+
+            var word = self.remainingWords[index];
+            self.remainingWords.splice(index, 1);
+
+            return word;
+        },
+        arrange: function (wordIndex) {
+            var self = this;
+
+            var currentWord = self.getWord(wordIndex);
 
             // Clone the contents of anagramWord into the dummy
             self.$dummyWord.html(self.$anagramWord.html());
 
-            // var offset = (self.$anagramWord.offset());
             self.$dummyWord.css({
                 position: 'absolute',
                 left: 0,
@@ -155,14 +166,12 @@
 
             var newOffsets = [];
 
-            // var spaces = 0;
-            for (var i = 0; i < toWord.length; i++) {
-                if (toWord[i] === ' ') {
+            for (var i = 0; i < currentWord.length; i++) {
+                if (currentWord[i] === ' ') {
                     $('<br>').appendTo(self.$anagramWord);
-                    // spaces++;
                 } else {
                     for (var j = 0; j < $lettersRemaining.length; j++) {
-                        if ($($lettersRemaining[j]).hasClass(toWord[i])) {
+                        if ($($lettersRemaining[j]).hasClass(currentWord[i])) {
                             self.$anagramWord.append($lettersRemaining[j]);
                             $lettersRemaining.splice(j, 1);
                             break;
@@ -194,7 +203,7 @@
             });
 
             setTimeout(function () {
-                self.arrange(self.opts.words[1]);
+                self.arrange();
             }, self.opts.arrangeRate);
         },
 
