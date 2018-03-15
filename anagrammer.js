@@ -117,18 +117,25 @@
             var self = this;
 
             // Once we are out of words, refresh the array
-            self.remainingWords = self.remainingWords.length
-                ? self.remainingWords
-                : self.opts.words.slice(0);
+            if (!self.remainingWords.length) {
+                self.remainingWords = self.opts.words.slice(0);
+
+                // Remove the current word so it can't be immediately reused
+                for (var i = 0; i < self.remainingWords.length; i++) {
+                    if (self.remainingWords[i] === self.currentWord) {
+                        self.remainingWords.splice(i, 1);
+                    }
+                }
+            }
 
             if (index == null) {
                 index = Math.floor(Math.random() * self.remainingWords.length);
             }
 
-            var word = self.remainingWords[index];
+            self.currentWord = self.remainingWords[index];
             self.remainingWords.splice(index, 1);
 
-            return word;
+            return self.currentWord;
         },
         arrange: function (wordIndex) {
             var self = this;
