@@ -51,6 +51,8 @@
             self.$anagramWord = $('<div class="anagram-word"></div>').appendTo(self.$container);
             self.$dummyWord = $('<div class="dummy-word"></div>').appendTo(self.$container);
 
+            self.$container.addClass('anagram-container');
+
             // Begin preloading assets
             self.preload();
         },
@@ -143,11 +145,15 @@
             });
 
             var $letters = self.$anagramWord.find('img');
+            var $lettersRemaining = self.$anagramWord.find('img');
+
             var $dummyLetters = self.$dummyWord.find('img');
 
             var oldOffsets = [];
+            var newOffsets = [];
+
             $dummyLetters.each(function (index) {
-                oldOffsets[index] = $($letters[index]).offset();
+                oldOffsets[index] = $letters.eq(index).offset();
                 $(this).css({
                     position: 'absolute',
                     left: oldOffsets[index].left,
@@ -159,20 +165,18 @@
                 $(this).attr('data-index', index);
             });
 
-            var $lettersRemaining = self.$anagramWord.find('img');
 
             $letters.detach();
             self.$anagramWord.empty();
-
-            var newOffsets = [];
 
             for (var i = 0; i < currentWord.length; i++) {
                 if (currentWord[i] === ' ') {
                     $('<br>').appendTo(self.$anagramWord);
                 } else {
                     for (var j = 0; j < $lettersRemaining.length; j++) {
-                        if ($($lettersRemaining[j]).hasClass(currentWord[i])) {
-                            self.$anagramWord.append($lettersRemaining[j]);
+                        var $currentLetter = $lettersRemaining.eq(j)
+                        if ($currentLetter.hasClass(currentWord[i])) {
+                            self.$anagramWord.append($currentLetter);
                             $lettersRemaining.splice(j, 1);
                             break;
                         }
